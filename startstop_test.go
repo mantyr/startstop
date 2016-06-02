@@ -42,6 +42,9 @@ func TestStartStop(t *testing.T) {
          s.Start()
     }()
     s.Stop()
+    if s.GetStatus() != IsStop {
+        t.Errorf("Error GetStatus()")
+    }
     status, err = s.Next(time.After(3 * time.Second)) // 4
     if status != IsAlternative {
         t.Errorf("Error Stop() and Next() - alternative")
@@ -52,6 +55,9 @@ func TestStartStop(t *testing.T) {
     }
 
     s.Finish()
+    if s.GetStatus() != IsFinish {
+        t.Errorf("Error GetStatus()")
+    }
 
     status, err = s.Next(time.After(3 * time.Second)) // 6
     if status == IsAlternative {
@@ -59,5 +65,8 @@ func TestStartStop(t *testing.T) {
     }
     if status != IsFinish || err != nil {
         t.Errorf("Error Finish(), %q, %q", status, err)
+    }
+    if s.GetStatus() != IsFinish {
+        t.Errorf("Error GetStatus()")
     }
 }

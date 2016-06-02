@@ -64,6 +64,12 @@ func (s *StartStop) Finish() {
     }
 }
 
+func (s *StartStop) GetStatus() string {
+    s.RLock()
+    defer s.RUnlock()
+    return s.status
+}
+
 func (s *StartStop) Next(params ...<-chan time.Time) (status string, err error) {
     s.RLock()
     status   = s.status
