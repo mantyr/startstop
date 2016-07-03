@@ -43,9 +43,12 @@ func (s *StartStop) Stop() {
     s.Lock()
     defer s.Unlock()
 
-    if s.status == IsStart {
-        s.status = IsStop
-        s.ch = make(chan struct{}, 1)
+    switch s.status {
+        case "":
+            s.status = IsStop
+        case IsStart:
+            s.status = IsStop
+            s.ch = make(chan struct{}, 1)
     }
 }
 
