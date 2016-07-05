@@ -9,7 +9,7 @@ import (
 type StartStop struct {
     sync.RWMutex
     status string
-    ch     chan struct{}
+    ch     []chan struct{}
 }
 
 const (
@@ -24,6 +24,18 @@ func NewStartStop() (s *StartStop) {
     return
 }
 
+func (s *StartStop) AddChan() (ch chan struct{}, status string) {
+    s.Lock()
+    defer s.Unlock()
+
+    status = s.status
+    if status == IsStop {
+        ch = make(chan struct{}, 1)
+        s.ch = append(s.ch, ch)
+    }
+    return
+}
+
 func (s *StartStop) Start() *StartStop {
     s.Lock()
     defer s.Unlock()
@@ -33,7 +45,10 @@ func (s *StartStop) Start() *StartStop {
             s.status = IsStart
         case IsStop:
             s.status = IsStart
-            s.ch <- struct{}{}
+            for _, ch := range s.ch {
+                ch <- struct{}{}
+            }
+            s.ch = []chan struct{}{}
         case IsStart, IsFinish:
     }
     return s
@@ -48,7 +63,6 @@ func (s *StartStop) Stop() {
             s.status = IsStop
         case IsStart:
             s.status = IsStop
-            s.ch = make(chan struct{}, 1)
     }
 }
 
@@ -61,7 +75,10 @@ func (s *StartStop) Finish() {
             s.status = IsFinish
         case IsStop:
             s.status = IsFinish
-            s.ch <- struct{}{}
+            for _, ch := range s.ch {
+                ch <- struct{}{}
+            }
+            s.ch = []chan struct{}{}
         case IsStart:
             s.status = IsFinish
     }
@@ -74,10 +91,12 @@ func (s *StartStop) GetStatus() string {
 }
 
 func (s *StartStop) Next(params ...<-chan time.Time) (status string, err error) {
-    s.RLock()
-    status   = s.status
-    is_next := s.ch
-    s.RUnlock()
+    status = s.GetStatus()
+    var is_next chan struct{}
+
+    if status == IsStop {
+        is_next, status = s.AddChan()
+    }
 
     switch status {
         case IsStart, IsFinish:
